@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CivicMind</title>
+    <style>
+      .user-icon { width:40px; height:40px; background:#ff6600; border:none; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:20px; color:#000; position:relative; }
+      .user-icon:hover { background:#ff8533; }
+      .user-menu { display:none; position:absolute; top:62px; left:32px; background:#1a1a1a; border:1px solid #333; border-radius:12px; padding:0; min-width:220px; box-shadow:0 8px 24px rgba(0,0,0,0.8); z-index:2000; }
+      .user-menu.active { display:block; }
+      .user-menu-item { padding:16px; border-bottom:1px solid #333; color:#fff; cursor:pointer; transition:background 0.3s; }
+      .user-menu-item:last-child { border-bottom:none; }
+      .user-menu-item:hover { background:#252525; }
+      .user-menu-header { padding:16px; border-bottom:1px solid #333; background:#0a0a0a; font-weight:600; color:#ff6600; }
+      .user-menu-logout { color:#ff9999; }
+      .user-menu-logout:hover { background:#331a1a; }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        background-color: #000000;
+        color: #ffffff;
+        line-height: 1.6;
+        scroll-behavior: smooth;
+      }
+
+      /* Navigation */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        padding: 24px 32px;
+        z-index: 1000;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .logo {
+        width: auto;
+        height: auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+        text-decoration: none;
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #ffffff;
+      }
+
+      .logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .logo:hover {
+        transform: scale(1.1);
+      }
+
+      .logo .mind {
+        color: #ff6600;
+      }
+
+      .nav-buttons {
+        display: flex;
+        gap: 16px;
+      }
+
+      .nav-button {
+        width: 38px;
+        height: 38px;
+        background-color: #ff6600;
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 700;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: none;
+        font-size: 0.65rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 0;
+      }
+
+      .nav-button:hover {
+        background-color: #ff8533;
+        transform: scale(1.1);
+        box-shadow: 0 8px 16px rgba(255, 102, 0, 0.4);
+      }
+
+      /* Hero Section */
+      .hero {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 40px 20px;
+        background:
+          linear-gradient(135deg, rgba(0, 0, 0, 0.82), rgba(0, 12, 28, 0.92)),
+          linear-gradient(120deg, rgba(255, 102, 0, 0.12), rgba(255, 102, 0, 0)),
+          url('https://images.unsplash.com/photo-1505761671935-60b3a7427bad?auto=format&fit=crop&w=1600&q=80');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        position: relative;
+      }
+
+      .hero h1 {
+        font-size: 4rem;
+        font-weight: 700;
+        margin-bottom: 24px;
+        letter-spacing: -2px;
+        position: relative;
+        z-index: 2;
+        text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+      }
+
+      .hero .accent {
+        color: #ff6600;
+      }
+
+      .hero p {
+        font-size: 1.5rem;
+        color: #ffffff;
+        margin-bottom: 48px;
+        max-width: 600px;
+        line-height: 1.8;
+        position: relative;
+        z-index: 2;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+      }
+
+      .cta-button {
+        display: inline-block;
+        padding: 16px 48px;
+        background-color: #ff6600;
+        color: #000000;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1.1rem;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: none;
+        position: relative;
+        z-index: 2;
+      }
+
+      .cta-button:hover {
+        background-color: #ff8533;
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px rgba(255, 102, 0, 0.3);
+      }
+
+      .cta-button:active {
+        transform: translateY(0);
+      }
+
+      /* Features Section */
+      .features {
+        padding: 80px 20px;
+        background-color: #000000;
+      }
+
+      .features-container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .section-title {
+        font-size: 2.5rem;
+        text-align: center;
+        margin-bottom: 60px;
+        font-weight: 700;
+      }
+
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 40px;
+      }
+
+      .feature-card {
+        padding: 40px;
+        background-color: #1a1a1a;
+        border-left: 4px solid #ff6600;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+      }
+
+      .feature-card:hover {
+        background-color: #252525;
+        transform: translateY(-8px);
+        box-shadow: 0 16px 32px rgba(255, 102, 0, 0.15);
+      }
+
+      .feature-card h3 {
+        font-size: 1.5rem;
+        margin-bottom: 16px;
+        color: #ff6600;
+      }
+
+      .feature-card p {
+        color: #cccccc;
+        line-height: 1.8;
+      }
+
+      /* About Section */
+      .about {
+        padding: 80px 20px;
+        background-color: #000000;
+      }
+
+      .about-container {
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+
+      .about h2 {
+        font-size: 2.5rem;
+        margin-bottom: 40px;
+        font-weight: 700;
+        text-align: center;
+      }
+
+      .about-content {
+        background-color: #1a1a1a;
+        padding: 40px;
+        border-radius: 8px;
+        border-left: 4px solid #ff6600;
+      }
+
+      .about-content p {
+        color: #cccccc;
+        font-size: 1.1rem;
+        line-height: 1.9;
+        margin-bottom: 20px;
+      }
+
+      .about-content ul {
+        list-style: none;
+        margin: 30px 0;
+      }
+
+      .about-content li {
+        color: #cccccc;
+        padding: 12px 0;
+        padding-left: 30px;
+        position: relative;
+      }
+
+      .about-content li:before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        color: #ff6600;
+        font-weight: bold;
+        font-size: 1.2rem;
+      }
+
+      /* Scroll Animation */
+      .scroll-reveal {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: all 0.8s ease;
+      }
+
+      .scroll-reveal.revealed {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .feature-card {
+        animation: slideUp 0.6s ease forwards;
+        opacity: 0;
+      }
+
+      .feature-card:nth-child(1) { animation-delay: 0.1s; }
+      .feature-card:nth-child(2) { animation-delay: 0.2s; }
+      .feature-card:nth-child(3) { animation-delay: 0.3s; }
+      .feature-card:nth-child(4) { animation-delay: 0.4s; }
+      .feature-card:nth-child(5) { animation-delay: 0.5s; }
+      .feature-card:nth-child(6) { animation-delay: 0.6s; }
+
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(40px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .features-grid.loaded .feature-card {
+        animation: slideUp 0.6s ease forwards;
+        opacity: 1;
+      }
+
+      /* CTA Section */
+      .cta-section {
+        padding: 80px 20px;
+        background-color: #1a1a1a;
+        text-align: center;
+      }
+
+      .cta-section h2 {
+        font-size: 2.5rem;
+        margin-bottom: 32px;
+        font-weight: 700;
+      }
+
+      .cta-section p {
+        font-size: 1.2rem;
+        color: #cccccc;
+        margin-bottom: 40px;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      /* Footer */
+      footer {
+        padding: 40px 20px;
+        background-color: #0a0a0a;
+        text-align: center;
+        color: #666666;
+        border-top: 1px solid #333333;
+      }
+
+      footer p {
+        margin-bottom: 16px;
+      }
+
+      .footer-links {
+        margin-top: 20px;
+      }
+
+      .footer-links a {
+        color: #ff6600;
+        text-decoration: none;
+        margin: 0 16px;
+        transition: color 0.3s ease;
+      }
+
+      .footer-links a:hover {
+        color: #ff8533;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .hero h1 {
+          font-size: 2.5rem;
+        }
+
+        .hero p {
+          font-size: 1.2rem;
+        }
+
+        .section-title {
+          font-size: 1.8rem;
+        }
+
+        .cta-section h2 {
+          font-size: 1.8rem;
+        }
+
+        nav {
+          padding: 16px 20px;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .logo {
+          width: 40px;
+          height: 40px;
+        }
+
+        .nav-button {
+          width: 35px;
+          height: 35px;
+          padding: 0;
+          font-size: 0.6rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="user-icon" id="user-menu-toggle" title="User Menu">👤</button>
+        <a href="/" class="logo">
+          Civic<span class="mind">Mind</span>
+        </a>
+      </div>
+    </nav>
+
+    <div class="user-menu" id="user-menu">
+      <div class="user-menu-header">
+        <div id="user-menu-name">User Profile</div>
+      </div>
+      <div class="user-menu-item" id="user-menu-email">Email: -</div>
+      <div class="user-menu-item" id="user-menu-location">Location: -</div>
+      <div class="user-menu-item" onclick="window.location.href='dashboard.html'" style="cursor:pointer;">📋 My Complaints</div>
+      <div class="user-menu-item user-menu-logout" onclick="logout()" style="cursor:pointer;">Logout</div>
+    </div>
+
+    <section class="hero">
+      <h1>Welcome to <span class="accent">CivicMind</span></h1>
+      <p>Transform the way communities engage and solve problems together</p>
+      <a href="auth.html" class="cta-button" id="hero-cta">Get Started</a>
+    </section>
+
+    <section class="about">
+      <div class="about-container">
+        <h2>About <span class="accent">CivicMind</span></h2>
+        <div class="about-content scroll-reveal">
+          <p>
+            CivicMind is a revolutionary civic engagement platform designed to bridge the gap between communities and local governance. 
+            We believe that every citizen has the right to be heard and the power to create meaningful change in their neighborhoods.
+          </p>
+          <p>
+            Our mission is to make civic participation simple, transparent, and impactful. By leveraging cutting-edge artificial intelligence 
+            and community collaboration, we enable residents to identify issues, share solutions, and collectively work toward a better tomorrow.
+          </p>
+          <p>
+            Whether you're concerned about potholes on your street, inadequate public services, or broader community challenges, 
+            CivicMind empowers you to document the problem, connect with neighbors facing similar issues, and collectively propose solutions 
+            to the appropriate authorities.
+          </p>
+          <p style="font-weight: 600; color: #ff6600; margin-top: 30px;">Key Benefits:</p>
+          <ul>
+            <li>Smart AI analysis that categorizes and prioritizes community issues</li>
+            <li>Real-time notifications and updates on issues you care about</li>
+            <li>Connect with neighbors and find similar problems in your area</li>
+            <li>Collaborative solution development and crowdsourced ideas</li>
+            <li>Direct communication channel with local authorities</li>
+            <li>Track resolution status and community impact metrics</li>
+            <li>Anonymous reporting options for sensitive issues</li>
+            <li>Multi-media support for comprehensive documentation</li>
+          </ul>
+          <p style="margin-top: 30px;">
+            Join our growing community of thousands of engaged citizens already using CivicMind to drive positive change. 
+            Together, we're building smarter, more responsive communities where every voice matters.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="features">
+      <div class="features-container">
+        <h2 class="section-title">Why Use <span class="accent">CivicMind</span>?</h2>
+        <div class="features-grid" id="features-grid">
+          <div class="feature-card">
+            <h3>🤖 Community Driven</h3>
+            <p>Empower your community by giving every voice the chance to be heard and make a real impact. Your concerns matter.</p>
+          </div>
+          <div class="feature-card">
+            <h3>✨ Smart Analysis</h3>
+            <p>Advanced AI technology to analyze and categorize community feedback with precision, identifying patterns and priorities automatically.</p>
+          </div>
+          <div class="feature-card">
+            <h3>⚡ Real-Time Updates</h3>
+            <p>Stay connected with live updates and instant notifications about issues that matter to you and your neighborhood.</p>
+          </div>
+          <div class="feature-card">
+            <h3>🔍 Find Similar Issues</h3>
+            <p>Discover similar problems reported in your area and connect with neighbors working toward the same solutions.</p>
+          </div>
+          <div class="feature-card">
+            <h3>💡 Collaborative Solutions</h3>
+            <p>Propose and rate solutions collaboratively. Leverage collective wisdom to find the best way forward for your community.</p>
+          </div>
+          <div class="feature-card">
+            <h3>📊 Impact Tracking</h3>
+            <p>Monitor the resolution status of reported issues and see the real-world impact your community is making over time.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-section">
+      <h2>Ready to Make a Difference?</h2>
+      <p>Join thousands of community members already using Civic to create positive change</p>
+      <a href="auth.html" class="cta-button" id="footer-cta">Start Your Journey</a>
+    </section>
+
+    <footer>
+      <p>&copy; 2026 Civic Frontend. All rights reserved.</p>
+      <div class="footer-links">
+        <a href="#privacy">Privacy Policy</a>
+        <a href="#terms">Terms of Service</a>
+        <a href="#contact">Contact Us</a>
+      </div>
+    </footer>
+
+    <script>
+      // Check if user is logged in and update CTAs accordingly
+      window.addEventListener('load', () => {
+        const userId = localStorage.getItem("user_id");
+        const userName = localStorage.getItem("user_name");
+        const userEmail = localStorage.getItem("user_email");
+        const userLocality = localStorage.getItem("user_locality");
+        const userButton = document.getElementById('user-menu-toggle');
+        
+        if (userId || userName) {
+          // User is logged in - update CTA buttons
+          const heroCTA = document.getElementById('hero-cta');
+          const footerCTA = document.getElementById('footer-cta');
+          
+          if (heroCTA) {
+            heroCTA.href = 'working.html';
+            heroCTA.textContent = `Welcome back, ${userName || 'User'}!`;
+          }
+          
+          if (footerCTA) {
+            footerCTA.href = 'working.html';
+            footerCTA.textContent = 'Go to Dashboard';
+          }
+
+          // Populate user menu
+          const userMenuName = document.getElementById('user-menu-name');
+          const userMenuEmail = document.getElementById('user-menu-email');
+          const userMenuLocation = document.getElementById('user-menu-location');
+          if (userMenuName) userMenuName.textContent = userName || 'User Profile';
+          if (userMenuEmail) userMenuEmail.textContent = `Email: ${userEmail || '-'}`;
+          if (userMenuLocation) userMenuLocation.textContent = `Location: ${userLocality || '-'}`;
+
+          // Enable the dropdown for logged-in users
+          if (userButton) {
+            userButton.title = 'User Menu';
+            userButton.onclick = toggleUserMenu;
+          }
+        } else {
+          // Not logged in: single button routes to sign-in
+          if (userButton) {
+            userButton.title = 'Sign In';
+            userButton.onclick = () => window.location.href = 'auth.html';
+          }
+        }
+        
+        const featuresGrid = document.getElementById('features-grid');
+        if (featuresGrid) {
+          featuresGrid.classList.add('loaded');
+        }
+      });
+
+      function toggleUserMenu() {
+        const userMenu = document.getElementById('user-menu');
+        if (!userMenu) return;
+        userMenu.classList.toggle('active');
+        document.addEventListener('click', function closeMenu(e) {
+          if (!e.target.closest('.user-icon') && !e.target.closest('.user-menu')) {
+            userMenu.classList.remove('active');
+            document.removeEventListener('click', closeMenu);
+          }
+        });
+      }
+
+      function logout() {
+        localStorage.removeItem("user_id");
+        localStorage.removeItem("user_name");
+        localStorage.removeItem("user_email");
+        localStorage.removeItem("user_token");
+        localStorage.removeItem("user_locality");
+        window.location.href = 'auth.html';
+      }
+
+      // Intersection Observer for scroll animations
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('revealed');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, observerOptions);
+
+      // Observe all scroll-reveal elements
+      document.querySelectorAll('.scroll-reveal').forEach(el => {
+        observer.observe(el);
+      });
+
+      // Smooth scroll for feature cards on intersection
+      const featureObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.style.opacity = '1';
+            entry.target.style.transform = 'translateY(0)';
+          }
+        });
+      }, {
+        threshold: 0.2,
+        rootMargin: '0px 0px -100px 0px'
+      });
+
+      document.querySelectorAll('.feature-card').forEach(card => {
+        featureObserver.observe(card);
+      });
+    </script>
+  </body>
+</html>

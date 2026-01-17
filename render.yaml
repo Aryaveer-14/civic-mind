@@ -1,0 +1,30 @@
+services:
+  # Backend Service
+  - type: web
+    name: civicmind-backend
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: cd civic-backend && npm install
+    startCommand: cd civic-backend && node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+    healthCheckPath: /
+
+  # Frontend Service
+  - type: web
+    name: civicmind-frontend
+    runtime: static
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
