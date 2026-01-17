@@ -140,16 +140,35 @@ try {
 
 /* ---------------- GEMINI SETUP ---------------- */
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+let genAI = null;
+let model = null;
 
-const model = genAI.getGenerativeModel({
-  model: "gemini-pro"
-});
+try {
+  if (process.env.GEMINI_API_KEY) {
+    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    model = genAI.getGenerativeModel({
+      model: "gemini-pro"
+    });
+    console.log("✅ Gemini AI initialized");
+  } else {
+    console.log("⚠️  Gemini API key not found. Using fallback analysis.");
+  }
+} catch (err) {
+  console.log("⚠️  Gemini AI initialization failed:", err.message);
+  genAI = null;
+  model = null;
+}
 
 
 /* ---------------- GEMINI ANALYSIS ---------------- */
 
 async function analyzeWithGemini(text, imagePath = null) {
+  // If Gemini is not configured, use fallback immediately
+  if (!genAI || !process.env.GEMINI_API_KEY) {
+    console.log("⚠️  Gemini not available, using fallback analysis");
+    return fallbackAnalyze(text, imagePath);
+  }
+
   const parts = [];
   
   // Add text part
@@ -423,6 +442,16 @@ async function upsertAuthorityContact(entry) {
 
 app.get("/", (req, res) => {
   res.send("Civic backend running");
+});
+
+// Health check endpoint for Railway
+app.get("/health", (req, res) => {
+  res.status(200).json({ 
+    status: "healthy", 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    database: useFirestore ? "firestore" : "in-memory"
+  });
 });
 
 // User Registration - Step 1: Generate OTP
