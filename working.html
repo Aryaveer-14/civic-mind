@@ -390,13 +390,17 @@
           
           debugLog(`🌐 Fetching /analyze endpoint...`);
           const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+          const timeout = setTimeout(() => controller.abort(), 120000); // 120 second timeout (increased for AI processing)
           
           const response = await fetch(`${API_BASE}/analyze`, { 
             method: "POST", 
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+              "Content-Type": "application/json",
+              "Connection": "keep-alive"
+            },
             body: JSON.stringify(payload),
-            signal: controller.signal
+            signal: controller.signal,
+            keepalive: true
           }).catch(err => {
             clearTimeout(timeout);
             throw err;
@@ -461,7 +465,9 @@
           console.error("Full error:", err);
           debugLog(`⚠️ Error: ${err.message}`);
           if (err.name === 'AbortError') {
-            showError(`⏱️ Request timed out after 60 seconds. Backend may be busy or unresponsive.`);
+            showError(`⏱️ Request timed out after 2 minutes. The AI analysis takes longer for images. Try again or simplify your request.`);
+          } else if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+            showError(`🌐 Network error: Cannot connect to server. Check if backend is running and try again.`);
           } else {
             showError(`⚠️ Error: ${err.message}. Ensure backend is running on 127.0.0.1:5000`);
           }

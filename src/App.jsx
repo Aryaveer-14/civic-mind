@@ -61,10 +61,25 @@ function App() {
       }
 
       console.log("Sending request to backend...");
+      
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 120000); // 120 second timeout
+      
       const response = await fetch(`${API_BASE_URL}/analyze`, {
         method: "POST",
-        body: formData
+        body: formData,
+        signal: controller.signal,
+        headers: {
+          "Connection": "keep-alive"
+        },
+        keepalive: true
+      }).catch(err => {
+        clearTimeout(timeout);
+        throw err;
       });
+      
+      clearTimeout(timeout);
 
       console.log("Response status:", response.status);
       const data = await response.json();
@@ -80,7 +95,13 @@ function App() {
       setPreview(null);
     } catch (err) {
       console.error("Error details:", err);
-      setError("❌ " + (err.message || "Backend not reachable. Make sure backend is running on port 5000"));
+      if (err.name === 'AbortError') {
+        setError("⏱️ Request timed out after 2 minutes. AI analysis takes longer for images. Try again or simplify your request.");
+      } else if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        setError("🌐 Network error: Cannot connect to server. Check if backend is running.");
+      } else {
+        setError("❌ " + (err.message || "Backend not reachable. Make sure backend is running on port 5000"));
+      }
     }
 
     setLoading(false);

@@ -848,6 +848,14 @@ app.post("/analyze", upload.single('image'), async (req, res) => {
   console.log("Body keys:", Object.keys(req.body));
   console.log("File present:", !!req.file);
   
+  // Extend timeout for long-running AI analysis (2 minutes)
+  req.setTimeout(120000);
+  res.setTimeout(120000);
+  
+  // Set keep-alive headers to prevent disconnect
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Keep-Alive', 'timeout=120');
+  
   const { text, user_id, image_base64 } = req.body;
   let imagePath = req.file ? req.file.path : null;
   
@@ -883,7 +891,13 @@ app.post("/analyze", upload.single('image'), async (req, res) => {
     console.log("🤖 Analyzing with Gemini...");
     let aiDecision;
     try {
-      aiDecision = await analyzeWithGemini(text || "No text provided", imagePath);
+      // Add timeout wrapper for Gemini API (60 seconds)
+      const analysisPromise = analyzeWithGemini(text || "No text provided", imagePath);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Gemini API timeout after 60s')), 60000)
+      );
+      
+      aiDecision = await Promise.race([analysisPromise, timeoutPromise]);
       console.log("✅ Gemini analysis complete:", aiDecision);
     } catch (aiErr) {
       console.error("⚠️  AI analysis failed, switching to fallback:", aiErr?.message || aiErr);
