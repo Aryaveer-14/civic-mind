@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import fs from "fs";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import admin from "firebase-admin";
 
 dotenv.config();
 
@@ -19,7 +20,32 @@ app.use(express.static(path.join(__dirname, '../')));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-const complaints = [];
+// --- DATABASE SETUP ---
+let db = null;
+const complaints = []; // Fallback in-memory storage
+
+try {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    // Production: Use Service Account from Environment Variable
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    db = admin.firestore();
+    console.log("🔥 Connected to Firestore (Production/ServiceAccount)");
+  } else if (process.env.FIRESTORE_EMULATOR_HOST) {
+     // Local Emulator
+    admin.initializeApp({ projectId: "civic-emulator" });
+    db = admin.firestore();
+    console.log(`🔥 Connected to Firestore Emulator at ${process.env.FIRESTORE_EMULATOR_HOST}`);
+  } else {
+    console.log("⚠️  FIREBASE_SERVICE_ACCOUNT not set. Using in-memory storage (Data will be lost on restart).");
+  }
+} catch (err) {
+  console.error("❌ Firebase init failed:", err.message);
+  console.log("⚠️  Falling back to in-memory storage.");
+}
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 function generateId() {
@@ -96,9 +122,16 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, '../working.html'));
 });
 
-app.get("/stats", (req, res) => {
+app.get("/stats", async (req, res) => {
   try {
-    res.json({ overall: { total: complaints.length, satisfied: 0, not_satisfied: 0 } });
+    let total = 0;
+    if (db) {
+       const snapshot = await db.collection('complaints').count().get();
+       total = snapshot.data().count;
+    } else {
+       total = complaints.length;
+    }
+    res.json({ overall: { total, satisfied: 0, not_satisfied: 0 } });
   } catch (err) {
     console.error("GET /stats error:", err);
     res.status(500).json({ error: "Error" });
@@ -135,7 +168,21 @@ app.post("/analyze", async (req, res) => {
     const aiDecision = await analyzeWithGemini(text || "Media analysis", imagePath, finalMimeType);
     
     const complaintId = generateId();
-    complaints.push({ id: complaintId, user_id, text, has_media: !!imagePath, media_type: finalMimeType, ai_decision: aiDecision, created_at: new Date().toISOString() });
+    const complaintData = { 
+      id: complaintId, 
+      user_id, 
+      text, 
+      has_media: !!imagePath, 
+      media_type: finalMimeType, 
+      ai_decision: aiDecision, 
+      created_at: new Date().toISOString() 
+    };
+
+    if (db) {
+      await db.collection('complaints').doc(complaintId).set(complaintData);
+    } else {
+      complaints.push(complaintData);
+    }
 
     if (imagePath && fs.existsSync(imagePath)) {
       try { fs.unlinkSync(imagePath); } catch (err) { console.error("Cleanup error:", err.message); }
@@ -152,10 +199,30 @@ app.get("/similar-problems", (req, res) => {
   res.json({ success: true, total: 0, problems: [] });
 });
 
-app.post("/feedback", (req, res) => {
+app.post("/feedback", async (req, res) => {
   const { complaint_id, satisfied } = req.body;
   if (!complaint_id || satisfied === undefined) return res.status(400).json({ success: false, error: "Missing fields" });
-  res.json({ success: true });
+  
+  try {
+    if (db) {
+      // Update Firestore document
+      await db.collection('complaints').doc(complaint_id).update({
+        satisfied: satisfied,
+        feedback_at: new Date().toISOString()
+      });
+    } else {
+      // Update local array
+      const c = complaints.find(x => x.id === complaint_id);
+      if (c) {
+        c.satisfied = satisfied;
+        c.feedback_at = new Date().toISOString();
+      }
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Feedback error:", err.message);
+    res.status(500).json({ success: false, error: "Failed to save feedback" });
+  }
 });
 
 const PORT = process.env.PORT || 5000;
