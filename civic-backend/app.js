@@ -93,12 +93,7 @@ function fallbackAnalyze(text, imagePath = null) {
 }
 
 app.get("/", (req, res) => {
-  try {
-    res.send("Civic backend running");
-  } catch (err) {
-    console.error("GET / error:", err);
-    res.status(500).send("Error");
-  }
+  res.sendFile(path.join(__dirname, '../working.html'));
 });
 
 app.get("/stats", (req, res) => {
