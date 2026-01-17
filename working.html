@@ -340,19 +340,17 @@
           const payload = {
             text: text,
             user_id: userId,
-            media_data: null,
-            mime_type: null
+            image_base64: null
           };
           
           debugLog(`📋 Checking ${attachedMedia.length} attached files...`);
           // Convert first media to base64 if attached
           if (attachedMedia.length > 0) {
             const first = attachedMedia[0].file;
-            payload.mime_type = first.type;
             debugLog(`📤 Processing file: ${first.name} (${first.size} bytes, ${first.type})`);
             
             try {
-              payload.media_data = await new Promise((resolve, reject) => {
+              payload.image_base64 = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 const timeout = setTimeout(() => {
                   reject(new Error("FileReader timeout after 30s"));
@@ -386,7 +384,7 @@
           
           debugLog(`📡 Sending to ${API_BASE}/analyze...`);
           debugLog(`📋 Payload size: ${JSON.stringify(payload).length} bytes`);
-          debugLog(`📋 text="${text.substring(0, 30)}...", user_id="${userId}", has_media=${!!payload.media_data}`);
+          debugLog(`📋 text="${text.substring(0, 30)}...", user_id="${userId}", has_media=${!!payload.image_base64}`);
           
           debugLog(`🌐 Fetching /analyze endpoint...`);
           const controller = new AbortController();
