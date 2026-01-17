@@ -100,19 +100,40 @@ const otpStorage = {};
 
 // Initialize Firestore
 try {
-  // Set emulator host BEFORE initializing
-  process.env.FIRESTORE_EMULATOR_HOST = "localhost:8082";
+  // Only use emulator in development
+  if (process.env.NODE_ENV !== 'production') {
+    process.env.FIRESTORE_EMULATOR_HOST = "localhost:8082";
+  }
   
-  admin.initializeApp({
-    projectId: "civic-emulator"
-  });
+  // Initialize based on environment
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    // Production: use service account JSON from env variable
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    console.log("🔥 Connected to production Firestore");
+  } else if (process.env.NODE_ENV !== 'production') {
+    // Development: use emulator
+    admin.initializeApp({
+      projectId: "civic-emulator"
+    });
+    console.log("🔥 Connected to Firestore emulator at localhost:8082");
+  } else {
+    // Production without credentials: skip Firestore
+    throw new Error('No Firestore credentials in production');
+  }
   
   db = admin.firestore();
   useFirestore = true;
-  console.log("🔥 Connected to Firestore (emulator at localhost:8082)");
 } catch (err) {
   console.log("⚠️  Firestore not available, using in-memory database");
-  console.log("   To enable Firestore: ensure Java is installed and run 'firebase emulators:start'");
+  console.log("   Reason:", err.message);
+  if (process.env.NODE_ENV === 'production') {
+    console.log("   💡 To enable persistence: Set FIREBASE_SERVICE_ACCOUNT in Railway");
+  } else {
+    console.log("   💡 To enable Firestore: ensure Java is installed and run 'firebase emulators:start'");
+  }
   useFirestore = false;
 }
 
@@ -400,7 +421,26 @@ async function upsertAuthorityContact(entry) {
 /* ---------------- ROUTES ---------------- */
 
 app.get("/", (req, res) => {
-  res.send("Civic backend running");
+  res.json({ 
+    message: "Civic Backend API Running",
+    version: "1.0.0",
+    status: "healthy",
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Health check endpoint for Railway
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    services: {
+      database: useFirestore ? "firestore" : "in-memory",
+      sms: hasTwilio ? "twilio" : "console",
+      ai: !!process.env.GEMINI_API_KEY ? "gemini" : "disabled"
+    },
+    uptime: process.uptime()
+  });
 });
 
 // User Registration - Step 1: Generate OTP
@@ -1333,14 +1373,18 @@ process.on('unhandledRejection', (reason, promise) => {
 
 /* ---------------- SERVER ---------------- */
 
-const server = app.listen(5000, () => {
-  console.log("✅ Civic backend running on http://localhost:5000");
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Civic backend running on port ${PORT}`);
+  console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`   Firestore: ${useFirestore ? 'Enabled' : 'In-memory storage'}`);
+  console.log(`   SMS: ${hasTwilio ? 'Enabled (Twilio)' : 'Console logging'}`);
 });
 
 server.on('error', (err) => {
   console.error('❌ Server error:', err);
   if (err.code === 'EADDRINUSE') {
-    console.error('Port 5000 is already in use. Please free the port and try again.');
+    console.error(`Port ${PORT} is already in use. Please free the port and try again.`);
   }
   process.exit(1);
 });

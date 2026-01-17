@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import "./App.css";
+import API_BASE_URL from "./api";
 import SimilarProblems from "./components/SimilarProblems";
 import Dashboard from "./components/Dashboard";
 
@@ -60,7 +61,7 @@ function App() {
       }
 
       console.log("Sending request to backend...");
-      const response = await fetch("http://localhost:5000/analyze", {
+      const response = await fetch(`${API_BASE_URL}/analyze`, {
         method: "POST",
         body: formData
       });
@@ -87,7 +88,7 @@ function App() {
 
   const submitFeedback = async (satisfied) => {
     try {
-      await fetch("http://localhost:5000/feedback", {
+      await fetch(`${API_BASE_URL}/feedback`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -106,7 +107,7 @@ function App() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch("http://localhost:5000/stats");
+      const response = await fetch(`${API_BASE_URL}/stats`);
       const data = await response.json();
       setStats(data);
     } catch (err) {

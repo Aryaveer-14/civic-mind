@@ -11,7 +11,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: './index.html',
-        working: './working.html'
+        working: './working.html',
+        auth: './auth.html'
       }
     }
   }

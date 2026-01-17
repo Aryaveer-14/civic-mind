@@ -133,10 +133,34 @@
       </div>
     </div>
 
-    <script>
+    <div class="user-menu" id="user-menu"></div>
+    <script type="module">
+      const getApiUrl = () => {
+        try {
+           // Safe check for Vite environment variable
+           if (import.meta.env && import.meta.env.VITE_API_URL) {
+             return import.meta.env.VITE_API_URL;
+           }
+        } catch (e) {
+           // Ignore errors if import.meta.env is accessed in non-Vite environment
+        }
+        return "http://localhost:5000";
+      };
+
+      const API_BASE_URL = getApiUrl();
+      console.log("CivicMind Auth Configured with API:", API_BASE_URL);
+
       let otpTimer = null;
       let currentTempId = null;
       let currentContactNumber = null;
+
+      // Make functions global
+      window.toggleForms = toggleForms;
+      window.registerUser = registerUser;
+      window.verifyOTP = verifyOTP;
+      window.resendOTP = resendOTP;
+      window.loginUser = loginUser;
+      window.backToRegister = backToRegister;
 
       function toggleForms() {
         document.getElementById("register-form").classList.toggle("active");
@@ -169,9 +193,7 @@
         registerBtn.textContent = "Registering...";
 
         try {
-          const backendHost = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") ? window.location.hostname : "localhost";
-          const API_BASE = `http://${backendHost}:5000`;
-          const res = await fetch(`${API_BASE}/register`, {
+          const res = await fetch(`${API_BASE_URL}/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, name, contact_number, age, locality })
@@ -195,6 +217,7 @@
           // Start OTP timer
           startOTPTimer();
         } catch (err) {
+            console.error(err);
           showError("register-error", "Connection failed. Try again.");
           registerBtn.disabled = false;
           registerBtn.textContent = "Register";
@@ -255,9 +278,7 @@
         verifyBtn.textContent = "Verifying...";
 
         try {
-          const backendHost = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") ? window.location.hostname : "localhost";
-          const API_BASE = `http://${backendHost}:5000`;
-          const res = await fetch(`${API_BASE}/verify-otp`, {
+          const res = await fetch(`${API_BASE_URL}/verify-otp`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ contact_number: currentContactNumber, otp })
@@ -282,6 +303,7 @@
             clearErrors();
           }, 1500);
         } catch (err) {
+            console.error(err);
           showError("otp-error", "Connection failed. Try again.");
           verifyBtn.disabled = false;
           verifyBtn.textContent = "Verify OTP";
@@ -290,9 +312,7 @@
 
       async function resendOTP() {
         try {
-          const backendHost = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") ? window.location.hostname : "localhost";
-          const API_BASE = `http://${backendHost}:5000`;
-          const res = await fetch(`${API_BASE}/resend-otp`, {
+          const res = await fetch(`${API_BASE_URL}/resend-otp`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ contact_number: currentContactNumber })
@@ -317,6 +337,7 @@
           
           document.getElementById("otp-input").value = "";
         } catch (err) {
+            console.error(err);
           showError("otp-error", "Connection failed. Try again.");
         }
       }
@@ -330,9 +351,7 @@
         }
 
         try {
-          const backendHost = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") ? window.location.hostname : "localhost";
-          const API_BASE = `http://${backendHost}:5000`;
-          const res = await fetch(`${API_BASE}/login`, {
+          const res = await fetch(`${API_BASE_URL}/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email })
@@ -358,6 +377,7 @@
             window.location.href = "working.html";
           }, 1500);
         } catch (err) {
+            console.error(err);
           showError("login-error", "Connection failed. Try again.");
         }
       }

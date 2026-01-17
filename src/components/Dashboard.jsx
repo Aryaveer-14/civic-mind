@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import API_BASE_URL from "../api";
 
 function Dashboard({ userId, onViewSimilarProblems }) {
   const [complaints, setComplaints] = useState([]);
@@ -11,7 +12,7 @@ function Dashboard({ userId, onViewSimilarProblems }) {
         setLoading(true);
         setError("");
 
-        const response = await fetch(`http://localhost:5000/user/${userId}/complaints`);
+        const response = await fetch(`${API_BASE_URL}/user/${userId}/complaints`);
         const data = await response.json();
 
         if (!response.ok) {

@@ -1,0 +1,33 @@
+services:
+  # Backend Service
+  - type: web
+    name: civic-backend
+    env: node
+    root: civic-backend
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
+      - key: PORT
+        value: 10000
+
+  # Frontend Static Site
+  - type: static
+    name: civic-frontend
+    env: static
+    # Root is default (current directory)
+    buildCommand: npm install && npm run build
+    publishDir: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: civic-backend
+          property: url
