@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import API_BASE_URL from "../api";
 
 function SimilarProblems({ complaintData, userId, onBack }) {
   const [similarProblems, setSimilarProblems] = useState([]);
@@ -28,7 +27,7 @@ function SimilarProblems({ complaintData, userId, onBack }) {
         }
 
         const response = await fetch(
-          `${API_BASE_URL}/similar-problems?issue_type=${encodeURIComponent(issueType)}&area=${encodeURIComponent(area)}&user_id=${userId}`
+          `http://localhost:5000/similar-problems?issue_type=${encodeURIComponent(issueType)}&area=${encodeURIComponent(area)}&user_id=${userId}`
         );
 
         const data = await response.json();
@@ -57,7 +56,7 @@ function SimilarProblems({ complaintData, userId, onBack }) {
   // Fetch suggestions for a specific problem
   const fetchSuggestionsForProblem = async (complaintId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/suggestions/${complaintId}`);
+      const response = await fetch(`http://localhost:5000/suggestions/${complaintId}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -83,7 +82,7 @@ function SimilarProblems({ complaintData, userId, onBack }) {
     try {
       setSubmittingSuggestion(problemId);
 
-      const response = await fetch(`${API_BASE_URL}/suggestions`, {
+      const response = await fetch("http://localhost:5000/suggestions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -123,7 +122,7 @@ function SimilarProblems({ complaintData, userId, onBack }) {
   const handleRateSuggestion = async (suggestionId, rating) => {
     try {
       const response = await fetch(
-        `${API_BASE_URL}/suggestions/${suggestionId}/rate`,
+        `http://localhost:5000/suggestions/${suggestionId}/rate`,
         {
           method: "POST",
           headers: {

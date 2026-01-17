@@ -6,15 +6,24 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import multer from "multer";
 import fs from "fs";
 import twilio from "twilio";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
 /* ---------------- APP SETUP ---------------- */
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from parent directory (for HTML files)
+app.use(express.static(path.join(__dirname, '..')));
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Multer setup for file uploads
 const upload = multer({ 
@@ -100,40 +109,32 @@ const otpStorage = {};
 
 // Initialize Firestore
 try {
-  // Only use emulator in development
-  if (process.env.NODE_ENV !== 'production') {
-    process.env.FIRESTORE_EMULATOR_HOST = "localhost:8082";
-  }
-  
-  // Initialize based on environment
+  // Check if running in production with service account
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    // Production: use service account JSON from env variable
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
-    console.log("🔥 Connected to production Firestore");
-  } else if (process.env.NODE_ENV !== 'production') {
-    // Development: use emulator
+    db = admin.firestore();
+    useFirestore = true;
+    console.log("🔥 Connected to Firestore (Production)");
+  } else if (process.env.FIRESTORE_EMULATOR_HOST || process.env.NODE_ENV === 'development') {
+    // Use emulator for local development
+    process.env.FIRESTORE_EMULATOR_HOST = process.env.FIRESTORE_EMULATOR_HOST || "localhost:8082";
     admin.initializeApp({
       projectId: "civic-emulator"
     });
-    console.log("🔥 Connected to Firestore emulator at localhost:8082");
+    db = admin.firestore();
+    useFirestore = true;
+    console.log(`🔥 Connected to Firestore (emulator at ${process.env.FIRESTORE_EMULATOR_HOST})`);
   } else {
-    // Production without credentials: skip Firestore
-    throw new Error('No Firestore credentials in production');
+    console.log("⚠️  Firestore not configured, using in-memory database");
+    console.log("   For production: Set FIREBASE_SERVICE_ACCOUNT environment variable");
+    console.log("   For development: Run 'firebase emulators:start' and set FIRESTORE_EMULATOR_HOST");
+    useFirestore = false;
   }
-  
-  db = admin.firestore();
-  useFirestore = true;
 } catch (err) {
-  console.log("⚠️  Firestore not available, using in-memory database");
-  console.log("   Reason:", err.message);
-  if (process.env.NODE_ENV === 'production') {
-    console.log("   💡 To enable persistence: Set FIREBASE_SERVICE_ACCOUNT in Railway");
-  } else {
-    console.log("   💡 To enable Firestore: ensure Java is installed and run 'firebase emulators:start'");
-  }
+  console.log("⚠️  Firestore initialization failed, using in-memory database:", err.message);
   useFirestore = false;
 }
 
@@ -421,26 +422,7 @@ async function upsertAuthorityContact(entry) {
 /* ---------------- ROUTES ---------------- */
 
 app.get("/", (req, res) => {
-  res.json({ 
-    message: "Civic Backend API Running",
-    version: "1.0.0",
-    status: "healthy",
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
-
-// Health check endpoint for Railway
-app.get("/health", (req, res) => {
-  res.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-    services: {
-      database: useFirestore ? "firestore" : "in-memory",
-      sms: hasTwilio ? "twilio" : "console",
-      ai: !!process.env.GEMINI_API_KEY ? "gemini" : "disabled"
-    },
-    uptime: process.uptime()
-  });
+  res.send("Civic backend running");
 });
 
 // User Registration - Step 1: Generate OTP
@@ -848,29 +830,8 @@ app.post("/analyze", upload.single('image'), async (req, res) => {
   console.log("Body keys:", Object.keys(req.body));
   console.log("File present:", !!req.file);
   
-  // Extend timeout for long-running AI analysis (2 minutes)
-  req.setTimeout(120000);
-  res.setTimeout(120000);
-  
-  // Set keep-alive headers to prevent disconnect
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Keep-Alive', 'timeout=120');
-  
-  const { text, user_id, image_base64, media_data } = req.body;
+  const { text, user_id, image_base64 } = req.body;
   let imagePath = req.file ? req.file.path : null;
-  
-  // Handle media_data (from JSON payload - used by working.html)
-  if (!imagePath && media_data) {
-    try {
-      const tempPath = `uploads/temp-${Date.now()}.jpg`;
-      const buffer = Buffer.from(media_data, 'base64');
-      fs.writeFileSync(tempPath, buffer);
-      imagePath = tempPath;
-      console.log(`📝 Wrote media_data to ${imagePath} (${buffer.length} bytes)`);
-    } catch (err) {
-      console.error("❌ Failed to write media_data:", err.message);
-    }
-  }
   
   // If image_base64 is provided in JSON, write it to a temp file
   if (!imagePath && image_base64) {
@@ -904,13 +865,7 @@ app.post("/analyze", upload.single('image'), async (req, res) => {
     console.log("🤖 Analyzing with Gemini...");
     let aiDecision;
     try {
-      // Add timeout wrapper for Gemini API (60 seconds)
-      const analysisPromise = analyzeWithGemini(text || "No text provided", imagePath);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Gemini API timeout after 60s')), 60000)
-      );
-      
-      aiDecision = await Promise.race([analysisPromise, timeoutPromise]);
+      aiDecision = await analyzeWithGemini(text || "No text provided", imagePath);
       console.log("✅ Gemini analysis complete:", aiDecision);
     } catch (aiErr) {
       console.error("⚠️  AI analysis failed, switching to fallback:", aiErr?.message || aiErr);
@@ -1401,17 +1356,14 @@ process.on('unhandledRejection', (reason, promise) => {
 /* ---------------- SERVER ---------------- */
 
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, () => {
   console.log(`✅ Civic backend running on port ${PORT}`);
-  console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`   Firestore: ${useFirestore ? 'Enabled' : 'In-memory storage'}`);
-  console.log(`   SMS: ${hasTwilio ? 'Enabled (Twilio)' : 'Console logging'}`);
 });
 
 server.on('error', (err) => {
   console.error('❌ Server error:', err);
   if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use. Please free the port and try again.`);
+    console.error('Port 5000 is already in use. Please free the port and try again.');
   }
   process.exit(1);
 });
