@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CivicMind - Register / Login</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #000 0%, #1a1a1a 100%); color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+      nav { position: fixed; top: 0; left: 0; padding: 24px 32px; }
+      .logo { font-size: 1.3rem; font-weight: 700; color: #fff; text-decoration: none; }
+      .logo .mind { color: #ff6600; }
+      .container { max-width: 450px; width: 100%; }
+      .card { background: #1a1a1a; padding: 40px; border-radius: 16px; border: 1px solid #333; }
+      h1 { font-size: 2rem; margin-bottom: 10px; }
+      .accent { color: #ff6600; }
+      p { color: #999; margin-bottom: 30px; font-size: 0.95rem; }
+      .form-group { margin-bottom: 18px; }
+      label { display: block; margin-bottom: 6px; font-weight: 600; color: #ff6600; font-size: 0.9rem; }
+      input { width: 100%; padding: 12px; background: #0a0a0a; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 1rem; }
+      input:focus { outline: none; border-color: #ff6600; }
+      .button { width: 100%; padding: 12px; background: #ff6600; color: #000; border: none; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer; margin-top: 20px; }
+      .button:hover { background: #ff8533; }
+      .button:disabled { background: #666; cursor: not-allowed; }
+      .secondary-button { background: #333; color: #fff; width: auto; padding: 8px 16px; display: inline-block; margin-top: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+      .secondary-button:hover { background: #444; }
+      .toggle-form { text-align: center; margin-top: 20px; color: #999; font-size: 0.9rem; }
+      .toggle-form a { color: #ff6600; text-decoration: none; cursor: pointer; }
+      .error { background: #331a1a; color: #ff9999; padding: 12px; border-radius: 8px; margin-bottom: 20px; display: none; }
+      .error.active { display: block; }
+      .success { background: #1a3a1a; color: #99ff99; padding: 12px; border-radius: 8px; margin-bottom: 20px; display: none; }
+      .success.active { display: block; }
+      .form-section { display: none; }
+      .form-section.active { display: block; }
+      .otp-timer { color: #ff6600; font-weight: 600; margin-top: 10px; }
+      .otp-input { font-size: 1.5rem; text-align: center; letter-spacing: 10px; }
+      .back-button { display: inline-block; margin-top: 20px; color: #ff6600; cursor: pointer; text-decoration: none; font-size: 0.9rem; }
+      .back-button:hover { text-decoration: underline; }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a href="/" class="logo">Civic<span class="mind">Mind</span></a>
+    </nav>
+
+    <div class="container">
+      <div class="card">
+        <!-- Register Form -->
+        <div class="form-section active" id="register-form">
+          <h1>Create <span class="accent">Account</span></h1>
+          <p>Join Civic to report and resolve community issues</p>
+          <div class="error" id="register-error"></div>
+          <div class="success" id="register-success"></div>
+
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="reg-name" placeholder="John Doe">
+          </div>
+
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="reg-email" placeholder="you@example.com">
+          </div>
+
+          <div class="form-group">
+            <label>Contact Number</label>
+            <input type="tel" id="reg-contact" placeholder="+1 (555) 123-4567">
+          </div>
+
+          <div class="form-group">
+            <label>Age</label>
+            <input type="number" id="reg-age" placeholder="25" min="18" max="120">
+          </div>
+
+          <div class="form-group">
+            <label>Locality / City</label>
+            <input type="text" id="reg-locality" placeholder="New York, NY">
+          </div>
+
+          <button class="button" id="register-btn" onclick="registerUser()">Register</button>
+
+          <div class="toggle-form">
+            Have an account? <a onclick="toggleForms()">Login</a>
+          </div>
+        </div>
+
+        <!-- OTP Verification Form -->
+        <div class="form-section" id="otp-form">
+          <h1>Verify <span class="accent">Mobile</span></h1>
+          <p>Enter the 6-digit OTP sent to your mobile number</p>
+          <div class="error" id="otp-error"></div>
+          <div class="success" id="otp-success"></div>
+
+          <div style="text-align: center; margin-bottom: 20px; color: #999;">
+            <p id="otp-contact-display">Mobile: -</p>
+          </div>
+
+          <div class="form-group">
+            <label>Enter OTP</label>
+            <input type="text" id="otp-input" class="otp-input" placeholder="000000" maxlength="6">
+          </div>
+
+          <div class="otp-timer">
+            <p>Expires in: <span id="otp-timer">600</span>s</p>
+          </div>
+
+          <button class="button" id="verify-btn" onclick="verifyOTP()">Verify OTP</button>
+
+          <button class="secondary-button" onclick="resendOTP()">Resend OTP</button>
+
+          <div class="back-button" onclick="backToRegister()">← Back to Register</div>
+        </div>
+
+        <!-- Login Form -->
+        <div class="form-section" id="login-form">
+          <h1>Welcome <span class="accent">Back</span></h1>
+          <p>Login to your account to report issues</p>
+          <div class="error" id="login-error"></div>
+          <div class="success" id="login-success"></div>
+
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="login-email" placeholder="you@example.com">
+          </div>
+
+          <button class="button" onclick="loginUser()">Login</button>
+
+          <div class="toggle-form">
+            Don't have an account? <a onclick="toggleForms()">Register</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let otpTimer = null;
+      let currentTempId = null;
+      let currentContactNumber = null;
+
+      function toggleForms() {
+        document.getElementById("register-form").classList.toggle("active");
+        document.getElementById("login-form").classList.toggle("active");
+        clearErrors();
+        stopOTPTimer();
+      }
+
+      function clearErrors() {
+        document.querySelectorAll(".error, .success").forEach(el => {
+          el.classList.remove("active");
+          el.textContent = "";
+        });
+      }
+
+      async function registerUser() {
+        const name = document.getElementById("reg-name").value.trim();
+        const email = document.getElementById("reg-email").value.trim();
+        const contact_number = document.getElementById("reg-contact").value.trim();
+        const age = document.getElementById("reg-age").value.trim();
+        const locality = document.getElementById("reg-locality").value.trim();
+
+        if (!name || !email || !contact_number || !age || !locality) {
+          showError("register-error", "All fields are required");
+          return;
+        }
+
+        const registerBtn = document.getElementById("register-btn");
+        registerBtn.disabled = true;
+        registerBtn.textContent = "Registering...";
+
+        try {
+          const backendHost = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") ? window.location.hostname : "localhost";
+          const API_BASE = `http://${backendHost}:5000`;
+          const res = await fetch(`${API_BASE}/register`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, name, contact_number, age, locality })
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            showError("register-error", data.error || "Registration failed");
+            registerBtn.disabled = false;
+            registerBtn.textContent = "Register";
+            return;
+          }
+
+          // Store temp data for OTP verification
+          currentTempId = data.tempId;
+          currentContactNumber = contact_number;
+
+          // Show OTP form
+          showOTPForm(contact_number, data.otp);
+          
+          // Start OTP timer
+          startOTPTimer();
+        } catch (err) {
+          showError("register-error", "Connection failed. Try again.");
+          registerBtn.disabled = false;
+          registerBtn.textContent = "Register";
+        }
+      }
+
+      function showOTPForm(contact, devOtp) {
+        document.getElementById("register-form").classList.remove("active");
+        document.getElementById("otp-form").classList.add("active");
+        document.getElementById("otp-contact-display").textContent = `Mobile: ${contact}`;
+        
+        // Show OTP in dev mode
+        if (devOtp) {
+          showSuccess("otp-success", `📌 Dev Mode: Your OTP is ${devOtp}`);
+        }
+      }
+
+      function backToRegister() {
+        stopOTPTimer();
+        document.getElementById("otp-form").classList.remove("active");
+        document.getElementById("register-form").classList.add("active");
+        clearErrors();
+      }
+
+      function startOTPTimer() {
+        let timeLeft = 600; // 10 minutes
+        document.getElementById("otp-timer").textContent = timeLeft;
+
+        otpTimer = setInterval(() => {
+          timeLeft--;
+          document.getElementById("otp-timer").textContent = timeLeft;
+
+          if (timeLeft <= 0) {
+            stopOTPTimer();
+            showError("otp-error", "OTP expired. Please register again.");
+            document.getElementById("verify-btn").disabled = true;
+          }
+        }, 1000);
+      }
+
+      function stopOTPTimer() {
+        if (otpTimer) {
+          clearInterval(otpTimer);
+          otpTimer = null;
+        }
+      }
+
+      async function verifyOTP() {
+        const otp = document.getElementById("otp-input").value.trim();
+
+        if (!otp || otp.length !== 6) {
+          showError("otp-error", "Please enter a valid 6-digit OTP");
+          return;
+        }
+
+        const verifyBtn = document.getElementById("verify-btn");
+        verifyBtn.disabled = true;
+        verifyBtn.textContent = "Verifying...";
+
+        try {
+          const backendHost = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") ? window.location.hostname : "localhost";
+          const API_BASE = `http://${backendHost}:5000`;
+          const res = await fetch(`${API_BASE}/verify-otp`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contact_number: currentContactNumber, otp })
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            showError("otp-error", data.error || "OTP verification failed");
+            verifyBtn.disabled = false;
+            verifyBtn.textContent = "Verify OTP";
+            return;
+          }
+
+          stopOTPTimer();
+          showSuccess("otp-success", "✓ Email verified! Redirecting to login...");
+          
+          setTimeout(() => {
+            // Clear OTP form and show login
+            document.getElementById("otp-form").classList.remove("active");
+            document.getElementById("login-form").classList.add("active");
+            document.getElementById("login-email").value = data.email;
+            clearErrors();
+          }, 1500);
+        } catch (err) {
+          showError("otp-error", "Connection failed. Try again.");
+          verifyBtn.disabled = false;
+          verifyBtn.textContent = "Verify OTP";
+        }
+      }
+
+      async function resendOTP() {
+        try {
+          const backendHost = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") ? window.location.hostname : "localhost";
+          const API_BASE = `http://${backendHost}:5000`;
+          const res = await fetch(`${API_BASE}/resend-otp`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contact_number: currentContactNumber })
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            showError("otp-error", data.error || "Failed to resend OTP");
+            return;
+          }
+
+          // Reset timer
+          stopOTPTimer();
+          startOTPTimer();
+          
+          // Show dev OTP if available
+          if (data.otp) {
+            showSuccess("otp-success", `📌 Dev Mode: New OTP is ${data.otp}`);
+          } else {
+            showSuccess("otp-success", "✓ OTP resent to your mobile number");
+          }
+          
+          document.getElementById("otp-input").value = "";
+        } catch (err) {
+          showError("otp-error", "Connection failed. Try again.");
+        }
+      }
+
+      async function loginUser() {
+        const email = document.getElementById("login-email").value.trim();
+
+        if (!email) {
+          showError("login-error", "Email is required");
+          return;
+        }
+
+        try {
+          const backendHost = (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") ? window.location.hostname : "localhost";
+          const API_BASE = `http://${backendHost}:5000`;
+          const res = await fetch(`${API_BASE}/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email })
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            showError("login-error", data.error || "Login failed");
+            return;
+          }
+
+          // Store user info in localStorage
+          localStorage.setItem("user_id", data.user_id);
+          localStorage.setItem("user_name", data.name);
+          localStorage.setItem("user_email", data.email);
+          localStorage.setItem("user_token", data.token);
+          if (data.locality) {
+            localStorage.setItem("user_locality", data.locality);
+          }
+
+          showSuccess("login-success", `✓ Welcome ${data.name}! Redirecting...`);
+          setTimeout(() => {
+            window.location.href = "working.html";
+          }, 1500);
+        } catch (err) {
+          showError("login-error", "Connection failed. Try again.");
+        }
+      }
+
+      function showError(elementId, message) {
+        const el = document.getElementById(elementId);
+        el.textContent = message;
+        el.classList.add("active");
+      }
+
+      function showSuccess(elementId, message) {
+        const el = document.getElementById(elementId);
+        el.textContent = message;
+        el.classList.add("active");
+      }
+    </script>
+  </body>
+</html>

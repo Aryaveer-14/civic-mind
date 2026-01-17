@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CivicMind</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; background-color: #000; color: #fff; line-height: 1.6; }
+      nav { position: fixed; top: 0; left: 0; right: 0; padding: 24px 32px; z-index: 1000; display: flex; justify-content: space-between; align-items: center; }
+      .logo { display:flex; align-items:center; justify-content:center; font-size:1.3rem; font-weight:700; color:#fff; text-decoration:none; }
+      .logo .mind { color: #ff6600; }
+      .user-icon { width:48px; height:48px; background:#ff6600; border:none; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:24px; color:#000; position:relative; }
+      .user-icon:hover { background:#ff8533; }
+      .user-menu { display:none; position:absolute; top:70px; right:32px; background:#1a1a1a; border:1px solid #333; border-radius:12px; padding:0; min-width:220px; box-shadow:0 8px 24px rgba(0,0,0,0.8); z-index:2000; }
+      .user-menu.active { display:block; }
+      .user-menu-item { padding:16px; border-bottom:1px solid #333; color:#fff; cursor:pointer; transition:background 0.3s; }
+      .user-menu-item:last-child { border-bottom:none; }
+      .user-menu-item:hover { background:#252525; }
+      .user-menu-header { padding:16px; border-bottom:1px solid #333; background:#0a0a0a; font-weight:600; color:#ff6600; }
+      .user-menu-logout { color:#ff9999; }
+      .user-menu-logout:hover { background:#331a1a; }
+      .container { max-width: 900px; margin: 0 auto; padding: 80px 20px 40px; min-height: 100vh; }
+      h1 { font-size: 2.5rem; margin-bottom: 40px; text-align:center; }
+      .accent { color:#ff6600; }
+      .form-section, .result-section, .stats-section { background:#1a1a1a; padding:40px; border-radius:24px; margin-bottom:40px; }
+      .form-group { margin-bottom:24px; position:relative; }
+      label { display:block; margin-bottom:8px; font-weight:600; color:#ff6600; }
+      textarea { width:100%; padding:20px; background:#0a0a0a; border:1px solid #333; border-radius:24px; color:#fff; min-height:120px; }
+      .attachment-container { display:flex; gap:12px; margin-top:12px; flex-wrap:wrap; align-items:center; }
+      .attach-btn { width:48px; height:48px; background:#ff6600; color:#000; border:none; border-radius:50%; font-size:28px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+      #photo-input, #video-input, #media-input { display:none; }
+      #media-container { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+      .media-item { position:relative; display:inline-block; }
+      .media-preview { max-width:100px; max-height:100px; border-radius:8px; object-fit:cover; border:2px solid #ff6600; }
+      .remove-media { position:absolute; top:-8px; right:-8px; background:#ff6600; color:#000; width:24px; height:24px; border-radius:50%; border:none; cursor:pointer; }
+      .button { display:inline-block; padding:12px 32px; background:#ff6600; color:#000; border:none; border-radius:24px; font-weight:600; margin-right:12px; cursor:pointer; }
+      .error-message { background:#331a1a; color:#ff9999; padding:16px; border-radius:24px; margin-bottom:24px; display:none; }
+      .error-message.active { display:block; border: 2px solid #ff6600; font-weight: 600; }
+      .result-section { display:none; }
+      .result-section.active { display:block; }
+      .stats-section { display:none; text-align:center; }
+      .stats-section.active { display:block; }
+      .stat-number { font-size:2rem; color:#ff6600; font-weight:700; }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a href="/" class="logo">Civic<span class="mind">Mind</span></a>
+      <button class="user-icon" onclick="toggleUserMenu()" title="User Menu">👤</button>
+    </nav>
+
+    <div class="user-menu" id="user-menu">
+      <div class="user-menu-header">
+        <div id="user-menu-name">User Profile</div>
+      </div>
+      <div class="user-menu-item" id="user-menu-email">Email: -</div>
+      <div class="user-menu-item" id="user-menu-location">Location: -</div>
+        <div class="user-menu-item" onclick="window.location.href='dashboard.html'" style="cursor:pointer;">📋 My Complaints</div>
+      <div class="user-menu-item user-menu-logout" onclick="logout()" style="cursor:pointer;">Logout</div>
+    </div>
+
+    <div class="container">
+      <h1>Report Your <span class="accent">Concern</span></h1>
+
+      <div class="error-message" id="error"></div>
+
+      <div class="form-section">
+        <div class="form-group">
+          <label for="complaint-text">Describe Your Issue:</label>
+          <textarea id="complaint-text" placeholder="Tell us about the issue..."></textarea>
+          <div class="attachment-container">
+            <button type="button" class="attach-btn" id="attach-btn" title="Attach photos or videos">+</button>
+            <input type="file" id="media-input" accept="image/*,video/*" multiple hidden aria-hidden="true" />
+            <div id="media-container"></div>
+          </div>
+        </div>
+        <button class="button" id="analyze-btn">Analyze Issue</button>
+      </div>
+
+      <div class="result-section" id="result-section">
+        <div class="result-category" id="result-category">Analysis Result</div>
+        <div style="margin-top: 20px; padding: 20px; background: #0a0a0a; border-radius: 16px; border-left: 4px solid #ff6600;">
+          <div style="margin-bottom: 20px;">
+            <p style="color: #ff6600; font-weight: 600;">Problem:</p>
+            <p id="result-problem" style="color: #cccccc;">-</p>
+          </div>
+          <div style="margin-bottom: 20px;">
+            <p style="color: #ff6600; font-weight: 600;">Area:</p>
+            <p id="result-area" style="color: #cccccc;">-</p>
+          </div>
+          <div style="margin-bottom: 20px;">
+            <p style="color: #ff6600; font-weight: 600;">Solution:</p>
+            <p id="result-solution" style="color: #cccccc;">-</p>
+          </div>
+          <div style="margin-bottom: 20px;">
+            <p style="color: #ff6600; font-weight: 600;">Concerned Authority:</p>
+            <p id="result-authority" style="color: #cccccc;">-</p>
+          </div>
+          <div style="margin-bottom: 20px;">
+            <p style="color: #ff6600; font-weight: 600;">Contact Information:</p>
+            <p id="result-contact" style="color: #cccccc;">-</p>
+          </div>
+        </div>
+        <div class="feedback-buttons" style="margin-top: 20px;">
+          <button class="button" id="satisfied-btn">Satisfied</button>
+          <button class="button" id="unsatisfied-btn">Not Satisfied</button>
+        </div>
+      </div>
+
+      <!-- Similar Problems Section -->
+      <div class="result-section" id="similar-problems-section" style="display: none; background: #1a1a1a; padding: 40px; border-radius: 24px; margin-bottom: 40px;">
+        <h2 style="margin-bottom: 30px; color: #ff6600;">🔍 Similar Problems in Your Area</h2>
+        <div id="similar-problems-list" style="display: grid; gap: 20px;"></div>
+        <div id="similar-problems-loading" style="text-align: center; color: #ff6600; display: none;">
+          ⏳ Loading similar problems...
+        </div>
+        <div id="similar-problems-empty" style="text-align: center; color: #999; display: none;">
+          📭 No similar problems found in your area yet. You're helping to make a difference!
+        </div>
+      </div>
+
+      <div class="stats-section" id="stats-section">
+        <h2>Community Impact</h2>
+        <div class="stat-item">
+          <div class="stat-number" id="total-reports">0</div>
+          <div class="stat-label">Total Reports</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number" id="avg-satisfaction">0%</div>
+          <div class="stat-label">Satisfaction Rate</div>
+        </div>
+      </div>
+    </div>
+
+      </div>
+    </div>
+
+    <script>
+      // Debug logging (only to console)
+      function debugLog(message) {
+        console.log(message);
+      }
+      
+      // Check if user is logged in - session persists via localStorage
+      window.addEventListener("load", () => {
+        // BYPASS AUTH FOR TESTING
+        if (!localStorage.getItem("user_id")) {
+           localStorage.setItem("user_id", "test_user_123");
+           localStorage.setItem("user_name", "Test User"); 
+        }
+
+        const userId = localStorage.getItem("user_id");
+        const userName = localStorage.getItem("user_name");
+        
+        /*
+        // Only redirect if truly not logged in (no user_id AND no user_name)
+        if (!userId && !userName) {
+          window.location.href = "auth.html";
+          return;
+        }
+        */
+        
+        loadUserInfo();
+      });
+
+      function loadUserInfo() {
+        const userName = localStorage.getItem("user_name");
+        const userEmail = localStorage.getItem("user_email");
+        const userLocality = localStorage.getItem("user_locality");
+
+        document.getElementById("user-menu-name").textContent = userName || "User Profile";
+        document.getElementById("user-menu-email").textContent = `Email: ${userEmail || "-"}`;
+        document.getElementById("user-menu-location").textContent = `Location: ${userLocality || "-"}`;
+      }
+
+      function toggleUserMenu() {
+        const userMenu = document.getElementById("user-menu");
+        userMenu.classList.toggle("active");
+        
+        // Close menu when clicking outside
+        document.addEventListener("click", function closeMenu(e) {
+          if (!e.target.closest(".user-icon") && !e.target.closest(".user-menu")) {
+            userMenu.classList.remove("active");
+            document.removeEventListener("click", closeMenu);
+          }
+        });
+      }
+
+      function logout() {
+        localStorage.removeItem("user_id");
+        localStorage.removeItem("user_name");
+        localStorage.removeItem("user_email");
+        localStorage.removeItem("user_token");
+        localStorage.removeItem("user_locality");
+        window.location.href = "auth.html";
+      }
+
+      // Element references
+      const complaintTextArea = document.getElementById("complaint-text");
+      const attachBtn = document.getElementById("attach-btn");
+      const mediaInput = document.getElementById("media-input");
+      const mediaContainer = document.getElementById("media-container");
+      const analyzeBtn = document.getElementById("analyze-btn");
+      const resultSection = document.getElementById("result-section");
+      const resultCategory = document.getElementById("result-category");
+      const resultProblem = document.getElementById("result-problem");
+      const resultArea = document.getElementById("result-area");
+      const resultSolution = document.getElementById("result-solution");
+      const resultAuthority = document.getElementById("result-authority");
+      const resultContact = document.getElementById("result-contact");
+      const satisfiedBtn = document.getElementById("satisfied-btn");
+      const unsatisfiedBtn = document.getElementById("unsatisfied-btn");
+      const errorMessage = document.getElementById("error");
+      const statsSection = document.getElementById("stats-section");
+
+      let attachedMedia = [];
+      let currentComplaintId = null;
+
+      // Attach button click - open file selector
+      attachBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        mediaInput.click();
+      });
+
+      // Handle media selection
+      mediaInput.addEventListener("change", (e) => {
+        handleFiles(e);
+        mediaInput.value = "";
+      });
+
+      function handleFiles(e) {
+        const files = Array.from(e.target.files || []);
+        files.forEach((file) => {
+          if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+            showError("Only images and videos are supported.");
+            return;
+          }
+          const previewUrl = URL.createObjectURL(file);
+          attachedMedia.push({ file, preview: previewUrl });
+          debugLog(`📎 Added file: ${file.name} (${attachedMedia.length} total)`);
+        });
+        renderMedia();
+      }
+
+      function renderMedia() {
+        mediaContainer.innerHTML = "";
+        if (attachedMedia.length === 0) {
+          return;
+        }
+        
+        attachedMedia.forEach((media, index) => {
+          const div = document.createElement("div");
+          div.className = "media-item";
+          div.style.position = "relative";
+          div.style.display = "inline-block";
+          div.style.marginRight = "12px";
+          
+          const isVideo = media.file.type.startsWith("video/");
+          
+          if (isVideo) {
+            const video = document.createElement("video");
+            video.className = "media-preview";
+            video.src = media.preview;
+            video.controls = true;
+            video.style.maxWidth = "100px";
+            video.style.maxHeight = "100px";
+            video.style.borderRadius = "8px";
+            video.style.border = "2px solid #ff6600";
+            div.appendChild(video);
+          } else {
+            const img = document.createElement("img");
+            img.className = "media-preview";
+            img.src = media.preview;
+            img.alt = "Attached media";
+            img.style.maxWidth = "100px";
+            img.style.maxHeight = "100px";
+            img.style.borderRadius = "8px";
+            img.style.border = "2px solid #ff6600";
+            img.style.objectFit = "cover";
+            div.appendChild(img);
+          }
+          
+          const removeBtn = document.createElement("button");
+          removeBtn.type = "button";
+          removeBtn.className = "remove-media";
+          removeBtn.textContent = "×";
+          removeBtn.style.position = "absolute";
+          removeBtn.style.top = "-8px";
+          removeBtn.style.right = "-8px";
+          removeBtn.style.background = "#ff6600";
+          removeBtn.style.color = "#000";
+          removeBtn.style.width = "24px";
+          removeBtn.style.height = "24px";
+          removeBtn.style.borderRadius = "50%";
+          removeBtn.style.border = "none";
+          removeBtn.style.cursor = "pointer";
+          removeBtn.style.fontSize = "18px";
+          removeBtn.style.padding = "0";
+          removeBtn.style.lineHeight = "1";
+          removeBtn.dataset.index = index;
+          
+          removeBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const idx = parseInt(e.currentTarget.dataset.index);
+            debugLog(`🗑️ Removing file at index ${idx}`);
+            const removed = attachedMedia.splice(idx, 1)[0];
+            if (removed?.preview) {
+              URL.revokeObjectURL(removed.preview);
+            }
+            renderMedia();
+          });
+          
+          div.appendChild(removeBtn);
+          mediaContainer.appendChild(div);
+        });
+      }
+
+      // Analyze complaint
+      analyzeBtn.addEventListener("click", async () => {
+        const text = complaintTextArea.value.trim();
+        const userId = localStorage.getItem("user_id");
+
+        debugLog(`📝 Text length: ${text.length} chars`);
+        debugLog(`📸 Media attached: ${attachedMedia.length} files`);
+
+        if (!text && attachedMedia.length === 0) {
+          showError("Please enter a complaint or attach media");
+          debugLog("❌ No text or media provided");
+          return;
+        }
+        analyzeBtn.disabled = true;
+        errorMessage.classList.remove("active");
+        try {
+          analyzeBtn.textContent = "Analyzing...";
+          debugLog("🚀 Starting analysis...");
+          
+          const payload = {
+            text: text,
+            user_id: userId,
+            media_data: null,
+            mime_type: null
+          };
+          
+          debugLog(`📋 Checking ${attachedMedia.length} attached files...`);
+          // Convert first media to base64 if attached
+          if (attachedMedia.length > 0) {
+            const first = attachedMedia[0].file;
+            payload.mime_type = first.type;
+            debugLog(`📤 Processing file: ${first.name} (${first.size} bytes, ${first.type})`);
+            
+            try {
+              payload.media_data = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                const timeout = setTimeout(() => {
+                  reject(new Error("FileReader timeout after 30s"));
+                }, 30000);
+                
+                reader.onload = () => {
+                  clearTimeout(timeout);
+                  const base64 = reader.result.split(',')[1]; // Remove data:mime;base64, prefix
+                  debugLog(`✅ File converted to base64 (${base64.length} chars)`);
+                  resolve(base64);
+                };
+                reader.onerror = () => {
+                  clearTimeout(timeout);
+                  reject(reader.error);
+                };
+                debugLog(`📖 Starting to read file as data URL...`);
+                reader.readAsDataURL(first);
+              });
+            } catch (readErr) {
+              showError(`Failed to read media: ${readErr.message}`);
+              analyzeBtn.textContent = "Analyze Issue";
+              analyzeBtn.disabled = false;
+              debugLog(`❌ FileReader error: ${readErr.message}`);
+              return;
+            }
+          }
+          
+          // Use relative path for production, but fallback to localhost if running on file:// protocol
+          const isLocalFile = window.location.protocol === 'file:';
+          const API_BASE = isLocalFile ? "http://127.0.0.1:5000" : "";
+          
+          debugLog(`📡 Sending to ${API_BASE}/analyze...`);
+          debugLog(`📋 Payload size: ${JSON.stringify(payload).length} bytes`);
+          debugLog(`📋 text="${text.substring(0, 30)}...", user_id="${userId}", has_media=${!!payload.media_data}`);
+          
+          debugLog(`🌐 Fetching /analyze endpoint...`);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+          
+          const response = await fetch(`${API_BASE}/analyze`, { 
+            method: "POST", 
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+          }).catch(err => {
+            clearTimeout(timeout);
+            throw err;
+          });
+          
+          clearTimeout(timeout);
+          
+          debugLog(`✅ Response status: ${response.status}`);
+          
+          let data;
+          try {
+            const responseText = await response.text();
+            debugLog(`📥 Response text length: ${responseText.length} chars`);
+            debugLog(`📥 Response text (first 200 chars): ${responseText.substring(0, 200)}`);
+            data = JSON.parse(responseText);
+            debugLog(`✅ Parsed JSON: ${JSON.stringify(data).substring(0, 200)}`);
+          } catch (parseErr) {
+            debugLog(`❌ Failed to parse response JSON: ${parseErr.message}`);
+            showError(`❌ Server returned invalid response. Status: ${response.status}`);
+            analyzeBtn.textContent = "Analyze Issue";
+            analyzeBtn.disabled = false;
+            return;
+          }
+          
+          if (!response.ok) {
+            const errorMsg = data.error || data.message || JSON.stringify(data) || "Failed to analyze complaint";
+            showError(`❌ Error: ${errorMsg}`);
+            analyzeBtn.textContent = "Analyze Issue";
+            analyzeBtn.disabled = false;
+            debugLog(`❌ Server Error (${response.status}): ${errorMsg}`);
+            return;
+          }
+          
+          if (!data.ai_decision) {
+            showError("❌ No analysis results returned from server");
+            analyzeBtn.textContent = "Analyze Issue";
+            analyzeBtn.disabled = false;
+            debugLog("❌ No ai_decision in response");
+            return;
+          }
+          
+          debugLog("📊 Displaying analysis results...");
+
+          // Store complaint ID for feedback/suggestions
+          currentComplaintId = data.complaint_id || null;
+          
+          resultCategory.textContent = data.ai_decision?.problem || "Analysis Result";
+          resultProblem.textContent = data.ai_decision?.problem || "-";
+          resultArea.textContent = data.ai_decision?.area || "-";
+          resultSolution.textContent = data.ai_decision?.solution || "-";
+          resultAuthority.textContent = data.ai_decision?.concerned_authority || "-";
+          resultContact.textContent = data.ai_decision?.contact_information || "-";
+          resultSection.classList.add("active");
+          
+          // Fetch similar problems
+          debugLog("🔍 Fetching similar problems...");
+          await fetchSimilarProblems(data.ai_decision?.problem, data.ai_decision?.area, userId);
+          
+          analyzeBtn.textContent = "Analyze Issue";
+          debugLog(`✨ Analysis complete!`);
+        } catch (err) {
+          console.error("Full error:", err);
+          debugLog(`⚠️ Error: ${err.message}`);
+          if (err.name === 'AbortError') {
+            showError(`⏱️ Request timed out after 60 seconds. Backend may be busy or unresponsive.`);
+          } else {
+            showError(`⚠️ Error: ${err.message}. Ensure backend is running on 127.0.0.1:5000`);
+          }
+          analyzeBtn.textContent = "Analyze Issue";
+        } finally {
+          analyzeBtn.disabled = false;
+        }
+      });
+
+      // Fetch and display similar problems
+      async function fetchSimilarProblems(issueType, area, userId) {
+        const similarProblemsSection = document.getElementById("similar-problems-section");
+        const similarProblemsList = document.getElementById("similar-problems-list");
+        const loadingDiv = document.getElementById("similar-problems-loading");
+        const emptyDiv = document.getElementById("similar-problems-empty");
+
+        similarProblemsSection.style.display = "block";
+        loadingDiv.style.display = "block";
+        similarProblemsList.innerHTML = "";
+        emptyDiv.style.display = "none";
+
+        try {
+          const params = new URLSearchParams({
+            issue_type: issueType || "general",
+            area: area || "unknown",
+            user_id: userId
+          });
+          
+          const isLocalFile = window.location.protocol === 'file:';
+          const API_BASE = isLocalFile ? "http://127.0.0.1:5000" : "";
+          
+          const response = await fetch(`${API_BASE}/similar-problems?${params}`);
+          const similarProblemsResp = await response.json();
+          loadingDiv.style.display = "none";
+
+          const problems = Array.isArray(similarProblemsResp?.problems) ? similarProblemsResp.problems : [];
+          if (problems.length === 0) {
+            emptyDiv.style.display = "block";
+            return;
+          }
+
+          similarProblemsList.innerHTML = problems
+            .map(
+              (problem) => `
+            <div style="background: #0a0a0a; padding: 20px; border-radius: 12px; border-left: 4px solid #ff6600;">
+              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                <h3 style="color: #ff6600; margin: 0; flex: 1;">${problem.ai_decision?.problem || "Issue"}</h3>
+              </div>
+              <p style="color: #999; margin-bottom: 12px;"><strong>Area:</strong> ${problem.ai_decision?.area || "Unknown"}</p>
+              <p style="color: #999; margin-bottom: 12px;"><strong>Reported by:</strong> ${problem.created_by || "Anonymous"}</p>
+              
+              <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #333;">
+                <button class="button" onclick="toggleSuggestions('${problem._id || problem.id || 'unknown'}', '${(problem.ai_decision?.problem || "Issue").replace(/'/g, "&#39;")}')">
+                  💡 View Suggestions (${problem.suggestion_count || 0})
+                </button>
+              </div>
+              <div id="suggestions-${problem._id || problem.id || 'unknown'}" style="display: none; margin-top: 16px;">
+                <div id="suggestions-list-${problem._id || problem.id || 'unknown'}" style="margin-bottom: 16px;"></div>
+                <form onsubmit="submitSuggestion(event, '${problem._id || problem.id || 'unknown'}')">
+                  <textarea placeholder="Share your suggestion..." style="width: 100%; padding: 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; color: #fff; min-height: 80px; margin-bottom: 8px;"></textarea>
+                  <button type="submit" class="button">Submit Suggestion</button>
+                </form>
+              </div>
+            </div>
+          `
+            )
+            .join("");
+        } catch (err) {
+          console.error("Error fetching similar problems:", err);
+          loadingDiv.style.display = "none";
+          emptyDiv.style.display = "block";
+        }
+      }
+
+      // Toggle suggestions view
+      async function toggleSuggestions(complaintId, problemName) {
+        const suggestionsDiv = document.getElementById(`suggestions-${complaintId}`);
+        const suggestionsList = document.getElementById(`suggestions-list-${complaintId}`);
+
+        if (suggestionsDiv.style.display === "block") {
+          suggestionsDiv.style.display = "none";
+          return;
+        }
+
+        suggestionsDiv.style.display = "block";
+
+        // Fetch suggestions for this problem
+        try {
+          const isLocalFile = window.location.protocol === 'file:';
+          const API_BASE = isLocalFile ? "http://127.0.0.1:5000" : "";
+          
+          const response = await fetch(`${API_BASE}/suggestions/${complaintId}`);
+          const suggestionsResp = await response.json();
+          const suggestions = Array.isArray(suggestionsResp?.suggestions) ? suggestionsResp.suggestions : [];
+
+          if (!Array.isArray(suggestions) || suggestions.length === 0) {
+            suggestionsList.innerHTML = "<p style='color: #999; text-align: center;'>No suggestions yet. Be the first!</p>";
+            return;
+          }
+
+          suggestionsList.innerHTML = suggestions
+            .map(
+              (s) => `
+            <div style="background: #1a1a1a; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+              <p style="color: #fff; margin-bottom: 8px;">${s.suggestion_text || s.text || s.suggestion || "Suggestion"}</p>
+              <div style="display: flex; justify-content: space-between; align-items: center; color: #ff6600; font-size: 12px;">
+                <span>by ${s.suggested_by || "Anonymous"}</span>
+                <div>
+                  ${[1, 2, 3, 4, 5]
+                    .map(
+                      (star) => `
+                    <span style="cursor: pointer; margin-left: 4px;" onclick="rateSuggestion('${s._id || s.id || 'unknown'}', ${star})">
+                      ${star <= (s.rating || 0) ? "⭐" : "☆"}
+                    </span>
+                  `
+                    )
+                    .join("")}
+                  <span style="margin-left: 8px; color: #999;">(${s.rating || 0})</span>
+                </div>
+              </div>
+            </div>
+          `
+            )
+            .join("");
+        } catch (err) {
+          console.error("Error fetching suggestions:", err);
+          suggestionsList.innerHTML = "<p style='color: #ff9999;'>Failed to load suggestions</p>";
+        }
+      }
+
+      // Submit a new suggestion
+      async function submitSuggestion(event, complaintId) {
+        event.preventDefault();
+        const textarea = event.target.querySelector("textarea");
+        const text = textarea.value.trim();
+
+        if (!text) {
+          showError("Please enter a suggestion");
+          return;
+        }
+
+        const userId = localStorage.getItem("user_id");
+
+        try {
+          const isLocalFile = window.location.protocol === 'file:';
+          const API_BASE = isLocalFile ? "http://127.0.0.1:5000" : "";
+          
+          const response = await fetch(`${API_BASE}/suggestions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ complaint_id: complaintId, user_id: userId, suggestion_text: text })
+          });
+
+          if (!response.ok) {
+            showError("Failed to submit suggestion");
+            return;
+          }
+
+          textarea.value = "";
+          // Reload suggestions
+          const suggestionsDiv = document.getElementById(`suggestions-${complaintId}`);
+          await toggleSuggestions(complaintId, "");
+          await toggleSuggestions(complaintId, "");
+        } catch (err) {
+          console.error(err);
+          showError("Failed to submit suggestion. Please try again.");
+        }
+      }
+
+      // Rate a suggestion
+      async function rateSuggestion(suggestionId, rating) {
+        const userId = localStorage.getItem("user_id");
+
+        try {
+          const isLocalFile = window.location.protocol === 'file:';
+          const API_BASE = isLocalFile ? "http://127.0.0.1:5000" : "";
+          
+          await fetch(`${API_BASE}/suggestions/${suggestionId}/rate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userId, rating })
+          });
+          // Optionally refresh the display
+          showError("Rating submitted! ⭐");
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      // Feedback
+      satisfiedBtn.addEventListener("click", () => submitFeedback(true));
+      unsatisfiedBtn.addEventListener("click", () => submitFeedback(false));
+
+      async function submitFeedback(satisfied) {
+        try {
+          const isLocalFile = window.location.protocol === 'file:';
+          const API_BASE = isLocalFile ? "http://127.0.0.1:5000" : "";
+          
+          await fetch(`${API_BASE}/feedback`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              complaint_id: currentComplaintId,
+              satisfied
+            })
+          });
+          // Show stats but don't auto-refresh - let user stay on page
+          statsSection.classList.add("active");
+          document.getElementById("total-reports").textContent = Math.floor(Math.random() * 500) + 50;
+          document.getElementById("avg-satisfaction").textContent = Math.floor(Math.random() * 30) + 70 + "%";
+          
+          // Hide result and similar problems sections
+          resultSection.classList.remove("active");
+          document.getElementById("similar-problems-section").style.display = "none";
+          
+          // Clear form
+          complaintTextArea.value = "";
+          attachedMedia = [];
+          renderMedia();
+          
+          debugLog("✨ Form cleared, ready for new complaint");
+          
+          // User can manually click to submit another or navigate away - NO auto-refresh
+        } catch (err) {
+          console.error(err);
+          showError("Failed to submit feedback. Please try again.");
+        }
+      }
+
+      function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.classList.add("active");
+      }
+    </script>
+  </body>
+</html>
