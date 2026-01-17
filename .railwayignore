@@ -1,0 +1,8 @@
+# Ignore frontend files when deploying backend
+/src
+/public
+/dist
+/node_modules
+*.html
+vite.config.js
+eslint.config.js
