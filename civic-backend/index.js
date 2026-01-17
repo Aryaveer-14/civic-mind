@@ -856,8 +856,21 @@ app.post("/analyze", upload.single('image'), async (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('Keep-Alive', 'timeout=120');
   
-  const { text, user_id, image_base64 } = req.body;
+  const { text, user_id, image_base64, media_data } = req.body;
   let imagePath = req.file ? req.file.path : null;
+  
+  // Handle media_data (from JSON payload - used by working.html)
+  if (!imagePath && media_data) {
+    try {
+      const tempPath = `uploads/temp-${Date.now()}.jpg`;
+      const buffer = Buffer.from(media_data, 'base64');
+      fs.writeFileSync(tempPath, buffer);
+      imagePath = tempPath;
+      console.log(`📝 Wrote media_data to ${imagePath} (${buffer.length} bytes)`);
+    } catch (err) {
+      console.error("❌ Failed to write media_data:", err.message);
+    }
+  }
   
   // If image_base64 is provided in JSON, write it to a temp file
   if (!imagePath && image_base64) {
